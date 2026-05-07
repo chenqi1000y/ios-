@@ -1,39 +1,30 @@
-name: iOS Build Check
-
+name:  iOS模拟器打包(无Mac测试专用)
 on:
-  workflow_dispatch:
   push:
-    branches:
-      - main
-      - master
-  pull_request:
+    branches: [ main ]
 
 jobs:
   build:
-    runs-on: macos-15
-    defaults:
-      run:
-        working-directory: lingju-ios
-
+    runs-on: macos-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Show Xcode version
-        run: xcodebuild -version
-
-      - name: Install XcodeGen
-        run: brew install xcodegen
-
-      - name: Generate project
-        run: xcodegen generate
-
-      - name: Build for iOS Simulator
+      - name: 构建iOS模拟器版本
         run: |
-          xcodebuild \
-            -project LingJu.xcodeproj \
+          xcodebuild build \
             -scheme LingJu \
             -sdk iphonesimulator \
-            -destination 'platform=iOS Simulator,name=iPhone 16' \
-            CODE_SIGNING_ALLOWED=NO \
-            build
+            -configuration Debug \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: 打包编译产物
+        run: |
+          cd ~/Library/Developer/Xcode/DerivedData
+          find . -name "LingJu.app" -type d -exec cp -r {} ../ \;
+          zip -r ios-simulator-app.zip ../LingJu.app
+
+      - name: 上传打包文件
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-simulator-app
+          path: ios-simulator-app.zip
