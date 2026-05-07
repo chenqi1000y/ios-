@@ -38,6 +38,8 @@ jobs:
           xcrun simctl list devices available
 
       - name: Build for iOS Simulator
+        id: build_step
+        continue-on-error: true
         run: |
           set -o pipefail
           xcodebuild \
@@ -49,9 +51,22 @@ jobs:
             build | tee xcodebuild.log
 
       - name: Show build errors on failure
-        if: failure()
+        if: steps.build_step.outcome == 'failure'
         run: |
+          echo "---- last 120 lines ----"
+          tail -n 120 xcodebuild.log || true
           echo "---- xcodebuild errors ----"
           grep -n "error:" xcodebuild.log | head -n 50 || true
           echo "---- xcodebuild warnings ----"
           grep -n "warning:" xcodebuild.log | head -n 50 || true
+
+      - name: Upload xcodebuild log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: xcodebuild-log
+          path: lingju-ios/xcodebuild.log
+
+      - name: Fail workflow if build failed
+        if: steps.build_step.outcome == 'failure'
+        run: exit 65
