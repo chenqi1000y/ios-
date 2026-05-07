@@ -1,0 +1,28 @@
+# Xcode / macOS
+.DS_Store
+DerivedData/
+build/
+*.xcworkspace
+xcuserdata/
+*.xccheckout
+*.xcscmblueprint
+
+# XcodeGen generated project
+LingJu.xcodeproj/project.xcworkspace/
+LingJu.xcodeproj/xcuserdata/
+
+# Swift Package Manager
+.build/
+Package.resolved
+
+# Fastlane / artifacts
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/
+fastlane/test_output/
+*.ipa
+*.dSYM.zip
+
+# Local temporary files
+*.log
+*.tmp

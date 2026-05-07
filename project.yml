@@ -1,0 +1,41 @@
+name: LingJu
+options:
+  bundleIdPrefix: com.ma37
+settings:
+  base:
+    PRODUCT_NAME: LingJu
+    PRODUCT_BUNDLE_IDENTIFIER: com.ma37.lingju
+    SWIFT_VERSION: 5.9
+    IPHONEOS_DEPLOYMENT_TARGET: "17.0"
+    CURRENT_PROJECT_VERSION: 1
+    MARKETING_VERSION: 1.0.0
+    GENERATE_INFOPLIST_FILE: YES
+    INFOPLIST_KEY_CFBundleDisplayName: 灵居
+    INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents: YES
+    INFOPLIST_KEY_UILaunchScreen_Generation: YES
+    INFOPLIST_KEY_NSPhotoLibraryUsageDescription: 灵居需要访问你的相册，用于上传户型图或房间图生成方案。
+    INFOPLIST_KEY_NSCameraUsageDescription: 灵居后续可使用相机拍摄户型图或房间图生成方案。
+targets:
+  LingJu:
+    type: application
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - Sources
+    resources:
+      - Resources
+    settings:
+      base:
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        DEVELOPMENT_ASSET_PATHS: "\"Resources\""
+        TARGETED_DEVICE_FAMILY: "1,2"
+schemes:
+  LingJu:
+    build:
+      targets:
+        LingJu: all
+    run:
+      config: Debug
+    archive:
+      config: Release
