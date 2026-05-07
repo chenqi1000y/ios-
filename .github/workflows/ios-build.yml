@@ -16,7 +16,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Show workspace
         run: |
@@ -32,12 +32,26 @@ jobs:
       - name: Generate project
         run: xcodegen generate
 
+      - name: Show project and simulators
+        run: |
+          xcodebuild -list -project LingJu.xcodeproj
+          xcrun simctl list devices available
+
       - name: Build for iOS Simulator
         run: |
+          set -o pipefail
           xcodebuild \
             -project LingJu.xcodeproj \
             -scheme LingJu \
             -sdk iphonesimulator \
-            -destination 'platform=iOS Simulator,name=iPhone 16' \
+            -destination 'generic/platform=iOS Simulator' \
             CODE_SIGNING_ALLOWED=NO \
-            build
+            build | tee xcodebuild.log
+
+      - name: Show build errors on failure
+        if: failure()
+        run: |
+          echo "---- xcodebuild errors ----"
+          grep -n "error:" xcodebuild.log | head -n 50 || true
+          echo "---- xcodebuild warnings ----"
+          grep -n "warning:" xcodebuild.log | head -n 50 || true
