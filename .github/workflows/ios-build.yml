@@ -1,4 +1,4 @@
-name:  iOS模拟器打包(无Mac测试专用)
+name: iOS模拟器打包(修复版)
 on:
   push:
     branches: [ main ]
@@ -9,20 +9,48 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # 第一步：列出所有文件，确认项目结构
+      - name: 检查项目文件
+        run: |
+          ls -la
+          echo "=== 查找Xcode项目文件 ==="
+          find . -name "*.xcodeproj" -o -name "*.xcworkspace"
+          echo "=== 列出所有scheme ==="
+          xcodebuild -list 2>/dev/null || echo "未找到项目文件"
+
+      # 第二步：构建（自动适配你的项目）
       - name: 构建iOS模拟器版本
         run: |
+          # 先尝试找到项目文件
+          PROJECT_FILE=$(find . -name "*.xcodeproj" | head -n 1)
+          if [ -z "$PROJECT_FILE" ]; then
+            echo "❌ 未找到.xcodeproj文件，请检查项目结构"
+            exit 1
+          fi
+          SCHEME_NAME=$(basename "$PROJECT_FILE" .xcodeproj)
+          echo "✅ 找到项目: $PROJECT_FILE"
+          echo "✅ 自动识别scheme: $SCHEME_NAME"
+
+          # 执行构建
           xcodebuild build \
-            -scheme LingJu \
+            -project "$PROJECT_FILE" \
+            -scheme "$SCHEME_NAME" \
             -sdk iphonesimulator \
             -configuration Debug \
             CODE_SIGNING_ALLOWED=NO
 
+      # 第三步：打包产物
       - name: 打包编译产物
         run: |
           cd ~/Library/Developer/Xcode/DerivedData
-          find . -name "LingJu.app" -type d -exec cp -r {} ../ \;
-          zip -r ios-simulator-app.zip ../LingJu.app
+          find . -name "*.app" -path "*/Build/Products/Debug-iphonesimulator/*" -type d | head -n 1 | while read -r APP_PATH; do
+            echo "✅ 找到APP文件: $APP_PATH"
+            APP_NAME=$(basename "$APP_PATH")
+            cp -r "$APP_PATH" ../
+            zip -r ios-simulator-app.zip "../$APP_NAME"
+          done
 
+      # 第四步：上传
       - name: 上传打包文件
         uses: actions/upload-artifact@v4
         with:
