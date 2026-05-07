@@ -1,68 +1,36 @@
-name: iOS模拟器打包（project.yml专用修复版）
+name: iOS打包修复版
 on:
   push:
     branches: [ main ]
 
+# 强制Node24，彻底消除警告
 env:
-  # 消除 Node.js 20 弃用警告
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   build:
     runs-on: macos-latest
     steps:
-      - name: 拉取代码
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      # 1. 先列出所有文件，确认项目结构
-      - name: 检查项目文件
-        run: |
-          ls -la
-          echo "=== 检查是否存在 project.yml ==="
-          cat project.yml || echo "❌ 未找到 project.yml 文件"
-
-      # 2. 安装 XcodeGen，根据 project.yml 生成 .xcodeproj
-      - name: 安装 XcodeGen 并生成项目文件
+      # 安装XcodeGen，生成项目文件（你的项目必备）
+      - name: 生成Xcode项目
         run: |
           brew install xcodegen
           xcodegen generate
-          ls -la *.xcodeproj || echo "❌ 项目文件生成失败"
 
-      # 3. 构建 iOS 模拟器版本
-      - name: 构建项目
+      # 固定命令构建（解决code 65，最稳定）
+      - name: 构建模拟器版本
         run: |
-          set -e
-          # 自动识别生成的项目文件和 scheme
-          PROJECT_FILE=$(find . -name "*.xcodeproj" | head -n 1)
-          SCHEME_NAME=$(basename "$PROJECT_FILE" .xcodeproj)
-          echo "✅ 找到项目文件: $PROJECT_FILE"
-          echo "✅ 识别 Scheme: $SCHEME_NAME"
+          xcodebuild build -project lingju-ios.xcodeproj -scheme lingju-ios -sdk iphonesimulator -derivedDataPath build CODE_SIGNING_IDENTITY="" CODE_SIGNING_ALLOWED=NO
 
-          # 执行无签名构建
-          xcodebuild build \
-            -project "$PROJECT_FILE" \
-            -scheme "$SCHEME_NAME" \
-            -sdk iphonesimulator \
-            -configuration Debug \
-            CODE_SIGNING_ALLOWED=NO
-
-      # 4. 打包编译产物
-      - name: 打包 APP 文件
+      # 打包并上传
+      - name: 打包APP
         run: |
-          cd ~/Library/Developer/Xcode/DerivedData
-          APP_PATH=$(find . -name "*.app" -path "*/Build/Products/Debug-iphonesimulator/*" -type d | head -n 1)
-          if [ -z "$APP_PATH" ]; then
-            echo "❌ 未找到编译后的 APP 文件"
-            exit 1
-          fi
-          echo "✅ 找到 APP 文件: $APP_PATH"
-          APP_NAME=$(basename "$APP_PATH")
-          cp -r "$APP_PATH" ../
-          zip -r ios-simulator-app.zip "../$APP_NAME"
-
-      # 5. 上传打包结果
-      - name: 上传构建产物
-        uses: actions/upload-artifact@v4
+          cd build/Build/Products/Debug-iphonesimulator
+          zip -r app.zip *.app
+      
+      - uses: actions/upload-artifact@v4
         with:
-          name: ios-simulator-app
-          path: ios-simulator-app.zip
+          name: ios-app
+          path: build/Build/Products/Debug-iphonesimulator/app.zip
