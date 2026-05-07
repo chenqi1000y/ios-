@@ -62,10 +62,11 @@ jobs:
 
       - name: Upload xcodebuild log
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: xcodebuild-log
-          path: lingju-ios/xcodebuild.log
+          path: xcodebuild.log
+          if-no-files-found: warn
 
       - name: Fail workflow if build failed
         if: steps.build_step.outcome == 'failure'
