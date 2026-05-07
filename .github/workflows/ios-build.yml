@@ -1,37 +1,44 @@
-name: iOS模拟器打包(修复版)
+name: iOS模拟器打包（project.yml专用修复版）
 on:
   push:
     branches: [ main ]
+
+env:
+  # 消除 Node.js 20 弃用警告
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   build:
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: 拉取代码
+        uses: actions/checkout@v4
 
-      # 第一步：列出所有文件，确认项目结构
+      # 1. 先列出所有文件，确认项目结构
       - name: 检查项目文件
         run: |
           ls -la
-          echo "=== 查找Xcode项目文件 ==="
-          find . -name "*.xcodeproj" -o -name "*.xcworkspace"
-          echo "=== 列出所有scheme ==="
-          xcodebuild -list 2>/dev/null || echo "未找到项目文件"
+          echo "=== 检查是否存在 project.yml ==="
+          cat project.yml || echo "❌ 未找到 project.yml 文件"
 
-      # 第二步：构建（自动适配你的项目）
-      - name: 构建iOS模拟器版本
+      # 2. 安装 XcodeGen，根据 project.yml 生成 .xcodeproj
+      - name: 安装 XcodeGen 并生成项目文件
         run: |
-          # 先尝试找到项目文件
-          PROJECT_FILE=$(find . -name "*.xcodeproj" | head -n 1)
-          if [ -z "$PROJECT_FILE" ]; then
-            echo "❌ 未找到.xcodeproj文件，请检查项目结构"
-            exit 1
-          fi
-          SCHEME_NAME=$(basename "$PROJECT_FILE" .xcodeproj)
-          echo "✅ 找到项目: $PROJECT_FILE"
-          echo "✅ 自动识别scheme: $SCHEME_NAME"
+          brew install xcodegen
+          xcodegen generate
+          ls -la *.xcodeproj || echo "❌ 项目文件生成失败"
 
-          # 执行构建
+      # 3. 构建 iOS 模拟器版本
+      - name: 构建项目
+        run: |
+          set -e
+          # 自动识别生成的项目文件和 scheme
+          PROJECT_FILE=$(find . -name "*.xcodeproj" | head -n 1)
+          SCHEME_NAME=$(basename "$PROJECT_FILE" .xcodeproj)
+          echo "✅ 找到项目文件: $PROJECT_FILE"
+          echo "✅ 识别 Scheme: $SCHEME_NAME"
+
+          # 执行无签名构建
           xcodebuild build \
             -project "$PROJECT_FILE" \
             -scheme "$SCHEME_NAME" \
@@ -39,19 +46,22 @@ jobs:
             -configuration Debug \
             CODE_SIGNING_ALLOWED=NO
 
-      # 第三步：打包产物
-      - name: 打包编译产物
+      # 4. 打包编译产物
+      - name: 打包 APP 文件
         run: |
           cd ~/Library/Developer/Xcode/DerivedData
-          find . -name "*.app" -path "*/Build/Products/Debug-iphonesimulator/*" -type d | head -n 1 | while read -r APP_PATH; do
-            echo "✅ 找到APP文件: $APP_PATH"
-            APP_NAME=$(basename "$APP_PATH")
-            cp -r "$APP_PATH" ../
-            zip -r ios-simulator-app.zip "../$APP_NAME"
-          done
+          APP_PATH=$(find . -name "*.app" -path "*/Build/Products/Debug-iphonesimulator/*" -type d | head -n 1)
+          if [ -z "$APP_PATH" ]; then
+            echo "❌ 未找到编译后的 APP 文件"
+            exit 1
+          fi
+          echo "✅ 找到 APP 文件: $APP_PATH"
+          APP_NAME=$(basename "$APP_PATH")
+          cp -r "$APP_PATH" ../
+          zip -r ios-simulator-app.zip "../$APP_NAME"
 
-      # 第四步：上传
-      - name: 上传打包文件
+      # 5. 上传打包结果
+      - name: 上传构建产物
         uses: actions/upload-artifact@v4
         with:
           name: ios-simulator-app
